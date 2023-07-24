@@ -42,7 +42,9 @@ if (app.Environment.IsDevelopment())
 //var name = app.Configuration["Name"];
 //var name1 = app.Configuration["Logging:LogLevel:Default"];
 
-
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}");
 
 
 // app.UseHttpsRedirection();

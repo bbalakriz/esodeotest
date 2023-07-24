@@ -1,46 +1,52 @@
-##See https://aka.ms/customizecontainer to learn how to customize your debug container and how Visual Studio uses this Dockerfile to build your images for faster debugging.
-#
-##Depending on the operating system of the host machines(s) that will build or run the containers, the image specified in the FROM statement may need to be changed.
-##For more information, please see https://aka.ms/containercompat
-#
-#FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
-#WORKDIR /app
-#EXPOSE 80
-#EXPOSE 443
-#
-#FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
-#WORKDIR /src
-#COPY ["esoSampleProject/esoSampleProject.csproj", "esoSampleProject/"]
-#RUN dotnet restore "esoSampleProject/esoSampleProject.csproj"
-#COPY . .
-#WORKDIR "/src/esoSampleProject"
-#RUN dotnet build "esoSampleProject.csproj" -c Release -o /app/build
-#
-#FROM build AS publish
-#RUN dotnet publish "esoSampleProject.csproj" -c Release -o /app/publish /p:UseAppHost=false
-#
-#FROM base AS final
-#WORKDIR /app
-#COPY --from=publish /app/publish .
-#ENTRYPOINT ["dotnet", "esoSampleProject.dll"]
-#
-
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
-WORKDIR /App
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 
-# Copy everything
-COPY . ./
-# Restore as distinct layers
-RUN dotnet restore
-# Build and publish a release
-RUN dotnet publish -c Release -o out
+////getting configuration 
 
-# Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
-WORKDIR /App
-EXPOSE 8080
-ENV ASPNETCORE_URLS=http://+:8080
+//IConfiguration configuration= new ConfigurationBuilder()
+//    .AddJsonFile
 
-COPY --from=build-env /App/out .
-ENTRYPOINT ["dotnet", "/App/esoSampleProject.dll"]
+
+var builder = WebApplication.CreateBuilder(args);
+// Add services to the container.
+
+
+// configuration details
+builder.Configuration.AddJsonFile("appsettings.json",optional: false,reloadOnChange: true);
+builder.Configuration.AddJsonFile("secrets/Secret.json", optional: true, reloadOnChange: true);
+//builder.Configuration.AddUserSecrets<Program>();
+builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
+
+builder.Services.AddMvc(options => options.EnableEndpointRouting = true);
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+//builder.Services.AddSwaggerGen();
+    
+
+var app = builder.Build();
+
+app.UseRouting();
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseEndpoints(endpoints =>
+    {
+        endpoints.MapControllerRoute("default", "{controller=Home}/{action=Index}");
+    });
+    //app.UseSwagger();
+    //app.UseSwaggerUI();
+}
+
+//var name = app.Configuration["Name"];
+//var name1 = app.Configuration["Logging:LogLevel:Default"];
+
+
+
+
+app.UseHttpsRedirection();
+
+app.MapControllers();
+
+app.Run();
